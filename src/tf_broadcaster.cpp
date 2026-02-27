@@ -10,22 +10,7 @@
 using namespace std::chrono_literals;
 
 /*
- * TODO: Create a Class named 'TFBroadcaster' that inherits from rclcpp::Node.
- * Requirements:
- * 1. The constructor should name the node "tf_broadcaster".
- * 2. Create a TransformBroadcaster.
- * 3. Create a timer that triggers every 100ms.
- * 4. In timer callback:
- *    - Create a TransformStamped message
- *    - Set header.stamp to current time
- *    - Set header.frame_id to "world"
- *    - Set child_frame_id to "robot"
- *    - Calculate circular motion:
- *      x = 2.0 * cos(time_seconds)
- *      y = 2.0 * sin(time_seconds)
- *      z = 0.0
- *    - Set rotation to identity quaternion (0, 0, 0, 1)
- *    - Broadcast the transform
+ * COMPLETED: Class named 'TFBroadcaster' that inherits from rclcpp::Node.
  */
 
 class TFBroadcaster : public rclcpp::Node
@@ -34,13 +19,42 @@ public:
     TFBroadcaster()
         : Node("tf_broadcaster")
     {
-        // TODO: Create the transform broadcaster here
+        // 1. Create the transform broadcaster
+        tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(this);
 
-        // TODO: Create the timer here
+        // 2. Create the timer that triggers every 100ms
+        timer_ = this->create_wall_timer(
+            100ms, std::bind(&TFBroadcaster::timer_callback, this));
+            
+        RCLCPP_INFO(this->get_logger(), "TF Broadcaster started. Robot is orbiting the world frame.");
     }
 
 private:
-    // TODO: Define timer_callback function here
+    // 3. Define timer_callback function
+    void timer_callback()
+    {
+        geometry_msgs::msg::TransformStamped t;
+        rclcpp::Time now = this->get_clock()->now();
+        
+        t.header.stamp = now;
+        t.header.frame_id = "world";
+        t.child_frame_id = "robot";
+
+        double time_sec = now.seconds();
+        t.transform.translation.x = 2.0 * std::cos(time_sec);
+        t.transform.translation.y = 2.0 * std::sin(time_sec);
+        t.transform.translation.z = 0.0;
+
+        t.transform.rotation.x = 0.0;
+        t.transform.rotation.y = 0.0;
+        t.transform.rotation.z = 0.0;
+        t.transform.rotation.w = 1.0;
+
+        tf_broadcaster_->sendTransform(t);
+        
+        // ADD THIS LINE:
+        RCLCPP_INFO(this->get_logger(), "Publishing TF: x=%.2f, y=%.2f", t.transform.translation.x, t.transform.translation.y);
+    }
 
     std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
     rclcpp::TimerBase::SharedPtr timer_;
